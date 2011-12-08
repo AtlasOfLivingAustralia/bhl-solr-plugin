@@ -30,7 +30,7 @@
               <descriptors>
                 <descriptor>mega-jar-assembly.xml</descriptor>
               </descriptors>
-              <finalName>bhl-solr-plugin.jar</finalName>
+              <finalName>bhl-solr-plugin</finalName>
               <appendAssemblyId>true</appendAssemblyId>
             </configuration>
           </execution>
