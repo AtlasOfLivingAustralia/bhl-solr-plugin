@@ -14,56 +14,34 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.lucene.search.Query;
-import org.apache.solr.common.params.CommonParams;
-import org.apache.solr.common.params.ModifiableSolrParams;
 import org.apache.solr.common.util.NamedList;
-import org.apache.solr.handler.component.ResponseBuilder;
-import org.apache.solr.handler.component.SearchComponent;
-import org.apache.solr.search.LuceneQParserPlugin;
-import org.apache.solr.search.QParser;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 
-public class TaxonSynonymyComponent extends SearchComponent {
+public class SynonymyHelper {
 
-	public static final String COMPONENT_NAME = "taxa";
+	public static String embellishQueryWithSynonyms(String q) {
+		try {
 
-	@Override
-	public void prepare(ResponseBuilder rb) throws IOException {
-	}
-
-	@Override
-	public void process(ResponseBuilder rb) throws IOException {
-
-		ModifiableSolrParams p = new ModifiableSolrParams(rb.req.getParams());
-		
-
-		if (p.getBool(COMPONENT_NAME, false)) {
-			String q = p.get(CommonParams.Q);
-			try {
-				NamedList<Double> synonyms = extractSynonyms(q, true);
-				rb.rsp.add("synonyms", synonyms);
-				q = addQueryTerms(q, synonyms);
-				
-				System.err.println("Creating new query based on these terms: " + q);
-				
-				// Have a new query string now -- reparse into a query...
-				LuceneQParserPlugin factory = new LuceneQParserPlugin();
-				QParser parser = factory.createParser(q, null, p, rb.req);
-				Query query = parser.parse();
-				rb.setQuery(query);
-				
-			} catch (Exception ex) {
-				throw new RuntimeException(ex);
+			if (q.startsWith("\"") && q.endsWith("\"")) {
+				q = q.substring(1, q.length() - 2);
 			}
-		}
 
+			NamedList<Double> synonyms = extractSynonyms(q, true);
+			q = addQueryTerms(q, synonyms);
+		} catch (Exception ex) {
+			throw new RuntimeException(ex);
+		}
+		return q;
 	}
 
-	public NamedList<Double> extractSynonyms(String term, boolean includeCommonNames) throws Exception {
+	public static NamedList<Double> extractSynonyms(String term, boolean includeCommonNames) throws Exception {
 
-		JsonNode root = webServiceCallJson(String.format("http://bie.ala.org.au/search.json?q=%s", URLEncoder.encode(term, "utf-8")));
+		String uri = String.format("http://bie.ala.org.au/search.json?q=%s", URLEncoder.encode(term, "utf-8"));
+
+		System.err.println("Finding taxa synonyms: " + uri);
+
+		JsonNode root = webServiceCallJson(uri);
 
 		JsonNode resultsNode = root.path("searchResults").path("results");
 		List<String> results = new ArrayList<String>();
@@ -96,7 +74,7 @@ public class TaxonSynonymyComponent extends SearchComponent {
 		return null;
 	}
 
-	private void addLookupSynonymsFromGuid(String guid, List<String> tokens) throws IOException {
+	public static void addLookupSynonymsFromGuid(String guid, List<String> tokens) throws IOException {
 		if (StringUtils.isEmpty(guid)) {
 			return;
 		}
@@ -110,7 +88,7 @@ public class TaxonSynonymyComponent extends SearchComponent {
 
 	}
 
-	protected JsonNode webServiceCallJson(String uri) throws IOException {
+	public static JsonNode webServiceCallJson(String uri) throws IOException {
 		HttpClient httpclient = new DefaultHttpClient();
 		HttpGet httpget = new HttpGet(uri);
 		httpget.setHeader("Accept", "application/json");
@@ -126,7 +104,7 @@ public class TaxonSynonymyComponent extends SearchComponent {
 		return null;
 	}
 
-	protected void appendUniqueTokens(String terms, List<String> tokens) {
+	public static void appendUniqueTokens(String terms, List<String> tokens) {
 		// First split by comma
 		String[] bits = terms.toLowerCase().split(",");
 		for (String bit : bits) {
@@ -140,32 +118,14 @@ public class TaxonSynonymyComponent extends SearchComponent {
 		}
 	}
 
-	protected String addQueryTerms(String orig, NamedList<Double> synonyms) {
+	public static String addQueryTerms(String orig, NamedList<Double> synonyms) {
 		StringBuilder b = new StringBuilder(orig.trim());
 		for (Map.Entry<String, Double> entry : synonyms) {
 			b.append(" \"").append(entry.getKey()).append("\"^").append(entry.getValue());
 		}
+
+		System.err.println("addQueryTerms: " + b.toString());
 		return b.toString();
-	}
-
-	@Override
-	public String getDescription() {
-		return "Search component that extracts taxa synonyms and injects them as query terms";
-	}
-
-	@Override
-	public String getSourceId() {
-		return null;
-	}
-
-	@Override
-	public String getSource() {
-		return null;
-	}
-
-	@Override
-	public String getVersion() {
-		return "0.1";
 	}
 
 }
