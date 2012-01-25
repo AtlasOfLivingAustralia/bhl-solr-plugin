@@ -22,26 +22,25 @@ public class TaxonSynonymyComponent extends SearchComponent {
 	@Override
 	public void process(ResponseBuilder rb) throws IOException {
 
-		ModifiableSolrParams p = new ModifiableSolrParams(rb.req.getParams());
+		ModifiableSolrParams solrParams = new ModifiableSolrParams(rb.req.getParams());
 
-		if (p.getBool(COMPONENT_NAME, false)) {
-			String q = p.get(CommonParams.Q);
+		if (solrParams.getBool(COMPONENT_NAME, false)) {
+			String qstr = solrParams.get(CommonParams.Q);
 			try {
-				NamedList<Double> synonyms = SynonymyHelper.extractSynonyms(q, true);
+				NamedList<Double> synonyms = SynonymyHelper.extractSynonyms(qstr, true);
 				rb.rsp.add("synonyms", synonyms);
-				q = SynonymyHelper.addQueryTerms(q, synonyms);
-
-				System.err.println("Creating new query based on these terms: " + q);
-
-				// Have a new query string now -- reparse into a query...
+				String newQstr = SynonymyHelper.addQueryTerms(qstr, synonyms);
+				// Have a new query string now -- reparse into a query object...
 				LuceneQParserPlugin factory = new LuceneQParserPlugin();
-				QParser parser = factory.createParser(q, null, p, rb.req);
+				QParser parser = factory.createParser(newQstr, null, solrParams, rb.req);				
 				Query query = parser.parse();
+				// Set the query object into the request
 				rb.setQuery(query);
+				// and the highlight query, otherwise only the original query terms will be highlighted.
 				rb.setHighlightQuery(query);
-				
-				p.set(CommonParams.Q, q);
-				rb.req.setParams(p);
+				// And for completeness sake, set the query string in the request to this one...
+				solrParams.set(CommonParams.Q, newQstr);
+				rb.req.setParams(solrParams);
 
 			} catch (Exception ex) {
 				throw new RuntimeException(ex);
