@@ -6,6 +6,8 @@ import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
@@ -19,6 +21,8 @@ import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 
 public class SynonymyHelper {
+	
+	private static Pattern CLEAN_NAME = Pattern.compile("^([A-Za-z\\s]+)");
 
 	public static String embellishQueryWithSynonyms(String q) {
 		try {
@@ -81,7 +85,14 @@ public class SynonymyHelper {
 		if (resultsNode.isArray()) {
 			for (int i = 0; i < resultsNode.size(); ++i) {
 				JsonNode node = resultsNode.get(i);
-				appendUniqueTokens(node.findValue("name").asText(), tokens);
+				String name = node.findValue("name").asText();
+				// At this point we assume this is a valid scientfic name, either single or binomial, no author. So in order
+				// to deal with some dodgey data from BIE, we'll only include all characters up to the first non-letter character.
+				Matcher m = CLEAN_NAME.matcher(name);
+				if (m.find()) {
+					name = m.group(1);
+					appendUniqueTokens(name, tokens);
+				}				
 			}
 		}
 
