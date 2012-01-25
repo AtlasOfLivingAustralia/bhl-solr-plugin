@@ -22,11 +22,6 @@ public class SynonymyHelper {
 
 	public static String embellishQueryWithSynonyms(String q) {
 		try {
-
-			if (q.startsWith("\"") && q.endsWith("\"")) {
-				q = q.substring(1, q.length() - 2);
-			}
-
 			NamedList<Double> synonyms = extractSynonyms(q, true);
 			q = addQueryTerms(q, synonyms);
 		} catch (Exception ex) {
@@ -36,6 +31,10 @@ public class SynonymyHelper {
 	}
 
 	public static NamedList<Double> extractSynonyms(String term, boolean includeCommonNames) throws Exception {
+		
+		if (term.startsWith("\"") && term.endsWith("\"")) {
+			term = term.substring(1, term.length() - 2);
+		}
 
 		String uri = String.format("http://bie.ala.org.au/search.json?q=%s", URLEncoder.encode(term, "utf-8"));
 
