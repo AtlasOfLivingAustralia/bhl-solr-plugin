@@ -15,6 +15,7 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.solr.common.params.CommonParams;
+import org.apache.solr.common.params.ModifiableSolrParams;
 import org.apache.solr.common.params.SolrParams;
 import org.apache.solr.common.util.NamedList;
 import org.apache.solr.handler.component.ResponseBuilder;
@@ -33,22 +34,16 @@ public class TaxonSynonymyComponent extends SearchComponent {
 	@Override
 	public void process(ResponseBuilder rb) throws IOException {
 
-		SolrParams p = rb.req.getParams();
+		ModifiableSolrParams p = new ModifiableSolrParams(rb.req.getParams());
 
 		if (p.getBool(COMPONENT_NAME, false)) {
 			String q = p.get(CommonParams.Q);
 			try {
 				NamedList<Double> synonyms = extractSynonyms(q, true);
 				rb.rsp.add("synonyms", synonyms);
-				NamedList<Object> pp = rb.req.getParams().toNamedList();
 				q = addQueryTerms(q, synonyms);
-				int idx = pp.indexOf(CommonParams.Q, 0);
-				pp.setVal(idx, q);
-				SolrParams newParams = SolrParams.toSolrParams(pp);
-				System.err.println("*** new query Q: " + q);
-				rb.req.setParams(newParams);
-				System.err.println("*** Confirm query Q: " + rb.req.getParams().get(CommonParams.Q));
-
+				p.set(CommonParams.Q, q);
+				rb.req.setParams(p);				
 			} catch (Exception ex) {
 				throw new RuntimeException(ex);
 			}
@@ -137,14 +132,9 @@ public class TaxonSynonymyComponent extends SearchComponent {
 
 	protected String addQueryTerms(String orig, NamedList<Double> synonyms) {
 		StringBuilder b = new StringBuilder(orig.trim());
-		System.err.println(String.format("*** Original Query: '%s'", b.toString()));
-
 		for (Map.Entry<String, Double> entry : synonyms) {
 			b.append(" \"").append(entry.getKey()).append("\"^").append(entry.getValue());
 		}
-
-		System.err.println(String.format("*** Synonymized Query: '%s'", b.toString()));
-
 		return b.toString();
 	}
 
