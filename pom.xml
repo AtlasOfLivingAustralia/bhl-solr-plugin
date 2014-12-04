@@ -2,6 +2,12 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
+  <parent>
+    <groupId>au.org.ala</groupId>
+    <artifactId>ala-parent-pom</artifactId>
+    <version>1.0</version>
+  </parent>
+
   <groupId>au.org.ala</groupId>
   <artifactId>bhl-solr-plugin</artifactId>
   <version>0.0.1-SNAPSHOT</version>
@@ -87,18 +93,4 @@
     	<version>3.5.0</version>
     </dependency>
   </dependencies>
-  
-          <distributionManagement>
-                <repository>
-                        <id>ala-repo</id>
-                        <name>Internal Releases</name>
-                        <url>http://ala-wonder.it.csiro.au/nexus/content/repositories/releases/</url>
-                </repository>
-                <snapshotRepository>
-                        <id>ala-repo</id>
-                        <name>Internal Releases</name>
-                        <url>http://ala-wonder.it.csiro.au/nexus/content/repositories/snapshots/</url>
-                </snapshotRepository>
-        </distributionManagement>
-        
 </project>
